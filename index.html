@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý Chấm công Viên chức</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231d4ed8'/><path d='M9 16.5l4.5 4.5L23 11' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12.5l4 4L19 7" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">QL Chấm công</div>
+          <div class="brand-sub">Viên chức đơn vị sự nghiệp</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <a data-view="dashboard"><span class="ico">▦</span> Tổng quan</a>
+        <a data-view="input"><span class="ico">✎</span> Nhập văn bản <span class="badge-new">Thông minh</span></a>
+        <a data-view="timesheet"><span class="ico">▤</span> Bảng chấm công</a>
+        <a data-view="summary"><span class="ico">∑</span> Thống kê tổng hợp</a>
+        <a data-view="bonus"><span class="ico">⊕</span> Ngày bù</a>
+        <a data-view="staff"><span class="ico">☺</span> Danh sách viên chức</a>
+        <a data-view="settings"><span class="ico">⚙</span> Cài đặt &amp; Dữ liệu</a>
+      </nav>
+      <div class="sidebar-foot">
+        <div id="unitNameSide" class="unit-side"></div>
+        <div class="muted small">Dữ liệu lưu trên máy này. Nhớ sao lưu định kỳ.</div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="btn-icon only-mobile" id="menuToggle" title="Menu">☰</button>
+        <h1 id="pageTitle">Tổng quan</h1>
+        <div class="period" id="periodBox">
+          <button class="btn-icon" id="prevMonth" title="Tháng trước">‹</button>
+          <select id="selMonth"></select>
+          <select id="selYear"></select>
+          <button class="btn-icon" id="nextMonth" title="Tháng sau">›</button>
+          <button class="btn btn-ghost btn-sm" id="thisMonth">Tháng này</button>
+        </div>
+      </header>
+      <main class="content" id="content"></main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3 id="modalTitle"></h3>
+        <button class="btn-icon" data-close title="Đóng">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot" id="modalFoot"></div>
+    </div>
+  </div>
+  <div class="toasts" id="toasts"></div>
+  <div id="printArea" class="print-area"></div>
+
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/parser.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
