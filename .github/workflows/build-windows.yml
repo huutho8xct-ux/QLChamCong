@@ -5,6 +5,11 @@ on:
     branches: ['**']
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tạo bản phát hành với thẻ này (vd: v1.2.1). Để trống nếu chỉ build.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -39,8 +44,13 @@ jobs:
             dist/*.exe
           if-no-files-found: error
 
-      - name: Phát hành (khi gắn tag v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Phát hành (khi gắn tag v* hoặc chạy thủ công có release_tag)
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Quản lý Chấm công – Ngày phép ${{ github.event.inputs.release_tag || github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          make_latest: true
           files: dist/*.exe
