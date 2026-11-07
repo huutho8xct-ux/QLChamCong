@@ -1,6 +1,6 @@
 {
   "name": "qlchamcong",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Phần mềm Quản lý Chấm công – Ngày phép – dành cho viên chức đơn vị sự nghiệp công lập",
   "main": "electron/main.js",
   "author": "QLChamCong",
@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node tests/parser.test.js",
-    "dist": "electron-builder --win nsis portable --x64 --ia32 --publish never"
+    "dist": "electron-builder --win nsis portable --x64 --publish never"
   },
   "devDependencies": {
     "electron": "22.3.27",
@@ -46,7 +46,7 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "CaiDat-ChamCong-NgayPhep-${version}.${ext}",
+      "artifactName": "CaiDat-ChamCong-NgayPhep-${version}-64bit.${ext}",
       "runAfterFinish": true,
       "menuCategory": false,
       "installerLanguages": [
@@ -56,8 +56,12 @@
       "license": "build/license.txt"
     },
     "portable": {
-      "artifactName": "ChamCong-NgayPhep-KhongCanCai-${version}.${ext}"
+      "artifactName": "ChamCong-NgayPhep-KhongCanCai-${version}-64bit.${ext}"
     },
-    "compression": "maximum"
+    "compression": "maximum",
+    "electronLanguages": [
+      "vi",
+      "en-US"
+    ]
   }
 }

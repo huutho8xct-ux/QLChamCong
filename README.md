@@ -10,12 +10,12 @@ Phần mềm chấm công dành cho **đơn vị sự nghiệp công lập**. Ch
 
 1. Vào tab **Actions** của kho GitHub → chọn lần chạy **Build Windows** mới nhất → mục *Artifacts* tải **QLChamCong-Windows** (file .zip) và giải nén.
    (Nếu có mục **Releases** thì tải trực tiếp từ đó.)
-2. Chạy **`CaiDat-ChamCong-NgayPhep-x.y.z.exe`** → chọn thư mục cài → *Install*.
+2. Chạy **`CaiDat-ChamCong-NgayPhep-x.y.z-64bit.exe`** → chọn thư mục cài → *Install*.
    Nếu Windows hiện cảnh báo *"Windows protected your PC"*, bấm **More info → Run anyway** (do phần mềm chưa mua chữ ký số).
 3. Mở phần mềm bằng biểu tượng **Quản lý Chấm công – Ngày phép** trên màn hình Desktop hoặc menu Start.
 
-- Bộ cài dùng được cho Windows 7, 8, 10, 11, cả bản 32-bit và 64-bit.
-- **`ChamCong-NgayPhep-KhongCanCai-x.y.z.exe`**: bản chạy ngay, không cần cài đặt (chép vào USB dùng được).
+- Bộ cài dùng được cho Windows 7, 8, 10, 11, bản **64-bit** (hầu hết máy tính hiện nay; xem tại *Settings → System → About → System type*).
+- **`ChamCong-NgayPhep-KhongCanCai-x.y.z-64bit.exe`**: bản chạy ngay, không cần cài đặt (chép vào USB dùng được).
 - Dữ liệu tự động ghi vào **`Documents\QLChamCong\du-lieu-cham-cong.json`**. Mỗi ngày phần mềm tự sao lưu 1 bản vào thư mục **`Documents\QLChamCong\SaoLuu`** (giữ 60 ngày gần nhất). Gỡ phần mềm hoặc cài bản mới **không làm mất dữ liệu**.
 - Muốn chuyển sang máy khác: chép thư mục `Documents\QLChamCong` sang máy mới, hoặc dùng *Sao lưu ra file* / *Khôi phục từ file* trong mục Cài đặt.
 

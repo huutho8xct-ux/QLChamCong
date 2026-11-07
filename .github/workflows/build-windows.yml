@@ -26,7 +26,7 @@ jobs:
       - name: Kiểm thử bộ phân tích văn bản
         run: npm test
 
-      - name: Đóng gói bộ cài đặt Windows (64-bit + 32-bit)
+      - name: Đóng gói bộ cài đặt Windows 64-bit
         run: npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
