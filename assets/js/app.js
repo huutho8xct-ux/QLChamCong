@@ -27,9 +27,9 @@
   };
 
   var TITLES = {
-    dashboard: 'Tổng quan', input: 'Nhập chấm công từ văn bản', timesheet: 'Bảng chấm công',
+    dashboard: 'Tổng quan', input: 'Nhập chấm công bằng văn bản', help: 'Hướng dẫn sử dụng', timesheet: 'Bảng chấm công',
     summary: 'Thống kê tổng hợp', bonus: 'Quản lý ngày bù', staff: 'Danh sách viên chức', settings: 'Cài đặt & Dữ liệu',
-    daily: 'Chấm nghỉ theo ngày', leave: 'Quản lý phép năm'
+    daily: 'Chấm nghỉ theo ngày', leave: 'Quản lý ngày phép năm'
   };
 
   /* ================= Tiện ích ================= */
@@ -212,14 +212,16 @@
       var staff = S.activeStaff();
       var y = state.year, m = state.month;
       if (!staff.length) {
-        return '<div class="card hero">' +
-          '<h2>Chào mừng đến với phần mềm Quản lý Chấm công Viên chức</h2>' +
-          '<p>Bắt đầu theo 3 bước đơn giản:</p>' +
-          '<ol class="steps"><li><b>Khai báo đơn vị</b> trong mục <a data-go="settings">Cài đặt</a>.</li>' +
-          '<li><b>Nhập danh sách viên chức</b> (có thể dán từ Excel) trong mục <a data-go="staff">Danh sách viên chức</a>.</li>' +
-          '<li><b>Dán văn bản chấm công</b> (ví dụ: "Ngày 05/11: Nguyễn Văn An nghỉ phép buổi sáng") trong mục <a data-go="input">Nhập văn bản</a>, phần mềm tự ghi vào bảng.</li></ol>' +
-          '<div class="row gap"><button class="btn btn-primary" data-go="staff">+ Thêm viên chức</button>' +
-          '<button class="btn" id="btnSample">Dùng thử với dữ liệu mẫu</button></div></div>';
+        return '<div class="card hero"><div class="about"><img src="assets/icon.png" alt=""><div>' +
+          '<h2>Chào mừng đến với phần mềm Quản lý Chấm công – Ngày phép</h2>' +
+          '<div class="muted">Chấm công, theo dõi ngày phép năm và ngày bù cho viên chức đơn vị sự nghiệp công lập.</div></div></div>' +
+          '<p>Chỉ cần <b>3 bước thiết lập</b> (khoảng 2 phút) là bắt đầu sử dụng được:</p>' +
+          '<ol class="steps"><li><b>Thông tin đơn vị</b>: tên đơn vị, người ký bảng chấm công.</li>' +
+          '<li><b>Danh sách viên chức</b>: gõ hoặc dán từ Excel, mỗi dòng một người.</li>' +
+          '<li><b>Số ngày phép năm</b> của từng người (mặc định 12 ngày).</li></ol>' +
+          '<div class="row gap wrap"><button class="btn btn-primary btn-lg" id="btnWizard">▶ Bắt đầu thiết lập</button>' +
+          '<button class="btn" id="btnSample">Dùng thử với dữ liệu mẫu</button>' +
+          '<label class="btn">⬆ Khôi phục từ file sao lưu<input type="file" id="heroImport" accept=".json,application/json" hidden></label></div></div>';
       }
       var std = 0, totalWork = 0, totalAbs = 0, groups = { work: 0, paid: 0, bhxh: 0, unpaid: 0 };
       var absRank = [];
@@ -236,6 +238,12 @@
         bonusTotal += Q.bonusBalance(S.data, s.id, lastDay).balance;
       });
       absRank.sort(function (a, b) { return b.abs - a.abs; });
+      var leaveUsedAll = 0, leaveTotalAll = 0;
+      var leaveList = staff.map(function (s) {
+        var al = Q.annualLeave(S.data, s, y);
+        leaveUsedAll += al.used; leaveTotalAll += al.total;
+        return { s: s, al: al };
+      }).sort(function (a, b) { return a.al.remain - b.al.remain; });
       var today = Q.todayYmd();
       var todayList = [];
       staff.forEach(function (s) {
@@ -247,6 +255,7 @@
         stat('Viên chức đang làm việc', staff.length, 'người', 'blue') +
         stat('Ngày công chuẩn ' + monthLabel(m, y), std, 'ngày', 'green') +
         stat('Tổng ngày nghỉ, vắng trong tháng', Q.fmtNum0(totalAbs), 'ngày', 'amber') +
+        stat('Ngày phép năm ' + y + ' đã nghỉ', Q.fmtNum0(leaveUsedAll) + ' / ' + Q.fmtNum0(leaveTotalAll), 'ngày', 'sky') +
         stat('Ngày bù còn tồn (lũy kế)', Q.fmtNum0(bonusTotal), 'ngày', 'violet') +
         '</div>';
 
@@ -289,13 +298,22 @@
         '</div>';
       html += '</div>';
 
+      // Ngày phép năm
+      html += '<div class="grid-2"><div class="card"><div class="card-head row"><h3>Ngày phép năm ' + y + ' – ít ngày còn lại nhất</h3><div class="spacer"></div><a data-go="leave" class="small">Xem tất cả →</a></div>' +
+        '<table class="table compact leave-low"><tbody>' + leaveList.slice(0, 6).map(function (x) {
+          var pct = x.al.total > 0 ? Math.max(0, Math.min(100, x.al.remain / x.al.total * 100)) : 0;
+          return '<tr><td><b>' + esc(x.s.name) + '</b></td><td class="num muted small">đã nghỉ ' + Q.fmtNum0(x.al.used) + '/' + Q.fmtNum0(x.al.total) + '</td>' +
+            '<td style="width:40%"><div class="remain"><b class="' + (x.al.remain < 0 ? 'neg' : '') + '">' + Q.fmtNum0(x.al.remain) + '</b><div class="bar-track"><div class="bar-fill ok" style="width:' + pct + '%"></div></div></div></td></tr>';
+        }).join('') + '</tbody></table>' +
+        (leaveList.some(function (x) { return !x.al.entered; }) ? '<div class="alert warn small mt">Có viên chức chưa nhập số ngày phép năm ' + y + ' (đang dùng mặc định ' + S.data.settings.annualLeave + ' ngày). <a data-go="leave">Nhập ngay</a></div>' : '') +
+        '</div>';
       // Hành động nhanh
-      html += '<div class="card"><div class="card-head"><h3>Thao tác nhanh</h3></div><div class="quick">' +
-        quick('input', '✎', 'Nhập văn bản chấm công', 'Dán thông báo nghỉ, phần mềm tự nhận diện tên, ngày, buổi') +
+      html += '<div class="card"><div class="card-head"><h3>Thao tác nhanh</h3></div><div class="quick q2">' +
+        quick('daily', '☑', 'Chấm nghỉ theo ngày', 'Tích chọn người nghỉ sáng, chiều, cả ngày') +
+        quick('leave', '✈', 'Ngày phép năm', 'Nhập phép đầu năm, xem số ngày còn lại') +
         quick('timesheet', '▤', 'Xem / sửa bảng chấm công', 'Bảng công theo mẫu C01-HD, in và xuất Excel') +
         quick('summary', '∑', 'Thống kê tổng hợp', 'Tổng hợp theo tháng, theo năm cho từng viên chức') +
-        quick('bonus', '⊕', 'Cộng ngày bù', 'Ghi nhận ngày làm thêm, trực; theo dõi số ngày bù còn lại') +
-        '</div></div>';
+        '</div></div></div>';
       return html;
 
       function stat(label, val, unit, color) {
@@ -306,6 +324,10 @@
       }
     },
     bind: function () {
+      var w = $('#btnWizard');
+      if (w) w.addEventListener('click', function () { openSetupWizard(1); });
+      var hi = $('#heroImport');
+      if (hi) hi.addEventListener('change', function () { importBackupFile(this.files[0]); });
       var b = $('#btnSample');
       if (b) b.addEventListener('click', function () {
         loadSampleStaff();
@@ -1337,6 +1359,17 @@
     return '<datalist id="dlPos">' + Object.keys(pos).map(function (p) { return '<option value="' + esc(p) + '">'; }).join('') + '</datalist>' +
       '<datalist id="dlDept">' + Object.keys(dep).map(function (p) { return '<option value="' + esc(p) + '">'; }).join('') + '</datalist>';
   }
+  /** Đọc 1 dòng danh sách viên chức (dán từ Excel hoặc gõ tay). Bỏ qua cột STT, dòng tiêu đề */
+  function parseStaffLine(l) {
+    var cols = String(l || '').split(/\t|;|\|/).map(function (x) { return x.trim(); });
+    while (cols.length && /^\d+[.)]?$/.test(cols[0])) cols.shift();
+    if (!cols.length) return null;
+    var name = cols[0].replace(/^\d+[.)]?\s+/, '').replace(/\s+/g, ' ');
+    if (!name || /^(stt|họ\s*(và)?\s*tên|ho\s*(va)?\s*ten)\b/i.test(name) || /\d/.test(name)) return null;
+    return { name: name, position: cols[1] || '', department: cols[2] || '', code: cols[3] || '' };
+  }
+  QLCC.parseStaffLine = parseStaffLine;
+
   function openBulkStaff() {
     var body = '<p class="muted small">Mỗi dòng một người. Định dạng: <b>Họ và tên ; Chức vụ ; Phòng/Tổ ; Mã</b> (các cột sau tuỳ chọn). Có thể sao chép trực tiếp các cột từ Excel (phân cách bằng Tab).</p>' +
       '<textarea id="bulkTxt" class="txt-input" style="min-height:220px" placeholder="Nguyễn Văn An; Giám đốc; Ban Giám đốc\nTrần Thị Bình; Kế toán; Phòng Hành chính\nLê Văn Cường"></textarea>';
@@ -1348,12 +1381,11 @@
       var existing = {};
       S.data.staff.forEach(function (s) { existing[Q.nameKey(s.name)] = 1; });
       lines.forEach(function (l) {
-        var cols = l.split(/\t|;|\|/).map(function (x) { return x.trim(); });
-        var name = (cols[0] || '').replace(/^\d+[.)]?\s+/, '').replace(/\s+/g, ' ');
-        if (!name || /^(stt|họ\s*(và)?\s*tên)/i.test(name)) return;
-        if (existing[Q.nameKey(name)]) { skipped++; return; }
-        existing[Q.nameKey(name)] = 1;
-        S.addStaff({ name: name, position: cols[1] || '', department: cols[2] || '', code: cols[3] || '' });
+        var r = parseStaffLine(l);
+        if (!r) return;
+        if (existing[Q.nameKey(r.name)]) { skipped++; return; }
+        existing[Q.nameKey(r.name)] = 1;
+        S.addStaff(r);
         added++;
       });
       S.save(); Modal.close();
@@ -1494,20 +1526,7 @@
         download('SaoLuu_ChamCong_' + Q.dateToYmd(t) + '.json', JSON.stringify(S.data, null, 1), 'application/json');
         toast('Đã tạo file sao lưu.');
       });
-      $('#bkImport').addEventListener('change', function () {
-        var file = this.files[0];
-        if (!file) return;
-        var r = new FileReader();
-        r.onload = function () {
-          try {
-            var d = JSON.parse(r.result);
-            if (!d || !d.staff || !d.records) throw new Error('File không đúng định dạng');
-            if (!confirmBox('Khôi phục sẽ THAY THẾ toàn bộ dữ liệu hiện tại bằng dữ liệu trong file (' + d.staff.length + ' viên chức). Tiếp tục?')) return;
-            S.replace(d); toast('Đã khôi phục dữ liệu.'); render();
-          } catch (e) { toast('Không đọc được file: ' + e.message, 'err'); }
-        };
-        r.readAsText(file);
-      });
+      $('#bkImport').addEventListener('change', function () { importBackupFile(this.files[0]); });
       var od = $('#bkOpenDir');
       if (od) od.addEventListener('click', function () { S.desktop.openDataDir(); });
       $('#bkSample').addEventListener('click', function () { loadSampleStaff(); toast('Đã nạp viên chức mẫu.'); render(); });
@@ -1519,6 +1538,140 @@
     }
   };
 
+
+  /* ================= Khôi phục từ file ================= */
+  function importBackupFile(file) {
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var d = JSON.parse(r.result);
+        if (!d || !d.staff || !d.records) throw new Error('File không đúng định dạng');
+        if (S.data.staff.length && !confirmBox('Khôi phục sẽ THAY THẾ toàn bộ dữ liệu hiện tại bằng dữ liệu trong file (' + d.staff.length + ' viên chức). Tiếp tục?')) return;
+        S.replace(d); toast('Đã khôi phục dữ liệu (' + d.staff.length + ' viên chức).'); render();
+      } catch (e) { toast('Không đọc được file: ' + e.message, 'err'); }
+    };
+    r.readAsText(file);
+  }
+
+  /* ================= Trình thiết lập lần đầu ================= */
+  function openSetupWizard(step) {
+    var st = S.data.settings, y = new Date().getFullYear();
+    var steps = ['1. Thông tin đơn vị', '2. Danh sách viên chức', '3. Ngày phép năm'];
+    var head = '<div class="wizard-steps">' + steps.map(function (t, i) {
+      return '<div class="' + (i + 1 === step ? 'on' : i + 1 < step ? 'done' : '') + '">' + (i + 1 < step ? '✓ ' : '') + t + '</div>';
+    }).join('') + '</div>';
+    var body = head, foot = '';
+    if (step === 1) {
+      body += '<p class="wizard-lead">Thông tin này được in trên đầu bảng chấm công và phần ký tên.</p><div class="form-grid">' +
+        '<label class="span2">Cơ quan chủ quản<input id="wzParent" value="' + esc(st.parentUnit) + '" placeholder="VD: SỞ VĂN HÓA, THỂ THAO VÀ DU LỊCH"></label>' +
+        '<label class="span2"><span>Tên đơn vị <span class="req">*</span></span><input id="wzUnit" value="' + esc(st.unitName) + '" placeholder="VD: THƯ VIỆN THÀNH PHỐ"></label>' +
+        '<label>Địa danh (dòng ngày ký)<input id="wzLoc" value="' + esc(st.location) + '" placeholder="VD: Cần Thơ"></label>' +
+        '<label>Người chấm công<input id="wzMaker" value="' + esc(st.signers.maker) + '"></label>' +
+        '<label class="span2">Thủ trưởng đơn vị<input id="wzDir" value="' + esc(st.signers.director) + '"></label></div>';
+      foot = '<button class="btn btn-ghost" data-close>Để sau</button><div class="spacer"></div><button class="btn btn-primary" id="wzNext">Tiếp theo →</button>';
+    } else if (step === 2) {
+      var n = S.data.staff.length;
+      body += '<p class="wizard-lead">Mỗi dòng một người: <b>Họ và tên ; Chức vụ ; Phòng/Tổ</b> (chức vụ, phòng không bắt buộc). Có thể sao chép các cột từ Excel rồi dán vào.' +
+        (n ? '<br><span class="ok-text">Đã có ' + n + ' viên chức trong danh sách.</span>' : '') + '</p>' +
+        '<textarea id="wzStaff" class="txt-input" style="min-height:220px" placeholder="Nguyễn Văn An; Giám đốc; Ban Giám đốc\nTrần Thị Bình; Kế toán; Phòng Hành chính\nLê Văn Cường; Viên chức; Phòng Nghiệp vụ"></textarea>';
+      foot = '<button class="btn" id="wzBack">← Quay lại</button><div class="spacer"></div><button class="btn btn-primary" id="wzNext">Tiếp theo →</button>';
+    } else {
+      body += '<p class="wizard-lead">Số ngày phép năm ' + y + ' áp dụng cho tất cả viên chức. Người có thâm niên (cứ 5 năm được thêm 1 ngày) có thể sửa riêng trong mục <b>Ngày phép năm</b>.</p><div class="form-grid">' +
+        '<label>Số ngày phép năm ' + y + '<input type="number" id="wzLeave" min="0" step="1" value="' + (st.annualLeave || 12) + '"></label>' +
+        '<label>Khi chỉ ghi "nghỉ", tính là<select id="wzDef">' + codeOptions(st.defaultAbsence) + '</select></label>' +
+        '<label class="check span2"><input type="checkbox" id="wzSat"' + (st.workSaturday ? ' checked' : '') + '> Đơn vị làm việc cả thứ bảy</label>' +
+        '<label class="check span2"><input type="checkbox" id="wzHol" checked> Nạp sẵn lịch nghỉ Tết, Giỗ Tổ năm ' + y + ' (gợi ý)</label></div>';
+      foot = '<button class="btn" id="wzBack">← Quay lại</button><div class="spacer"></div><button class="btn btn-success" id="wzDone">✔ Hoàn tất</button>';
+    }
+    Modal.open('Thiết lập phần mềm', body, foot, { wide: true });
+    var back = $('#wzBack');
+    if (back) back.addEventListener('click', function () { openSetupWizard(step - 1); });
+    var next = $('#wzNext');
+    if (next) next.addEventListener('click', function () {
+      if (step === 1) {
+        var unit = $('#wzUnit').value.trim();
+        if (!unit) { toast('Nhập tên đơn vị.', 'err'); return; }
+        st.parentUnit = $('#wzParent').value.trim(); st.unitName = unit; st.location = $('#wzLoc').value.trim();
+        st.signers.maker = $('#wzMaker').value.trim(); st.signers.director = $('#wzDir').value.trim();
+        S.save(); openSetupWizard(2);
+      } else {
+        var existing = {}, added = 0;
+        S.data.staff.forEach(function (x) { existing[Q.nameKey(x.name)] = 1; });
+        $('#wzStaff').value.split(/\r?\n/).forEach(function (l) {
+          var r = parseStaffLine(l);
+          if (!r || existing[Q.nameKey(r.name)]) return;
+          existing[Q.nameKey(r.name)] = 1;
+          S.addStaff(r); added++;
+        });
+        if (!S.data.staff.length) { toast('Nhập ít nhất một viên chức.', 'err'); return; }
+        S.save(); if (added) toast('Đã thêm ' + added + ' viên chức.');
+        openSetupWizard(3);
+      }
+    });
+    var done = $('#wzDone');
+    if (done) done.addEventListener('click', function () {
+      var v = +$('#wzLeave').value || 0;
+      st.annualLeave = v; st.defaultAbsence = $('#wzDef').value; st.workSaturday = $('#wzSat').checked;
+      S.data.staff.forEach(function (x) {
+        x.leave = x.leave || {}; x.leave[y] = x.leave[y] || {};
+        if (x.leave[y].quota === undefined || x.leave[y].quota === '') x.leave[y].quota = v;
+      });
+      if ($('#wzHol').checked && Q.SUGGESTED_HOLIDAYS[y]) {
+        Q.SUGGESTED_HOLIDAYS[y].forEach(function (h) {
+          if (!st.holidays.some(function (x) { return x.date === h[0]; })) st.holidays.push({ date: h[0], name: h[1] });
+        });
+      }
+      st.setupDone = true;
+      S.save(); Modal.close();
+      toast('Thiết lập xong! Bắt đầu chấm công.');
+      go('daily');
+    });
+  }
+
+  /* ================= VIEW: Hướng dẫn ================= */
+  Views.help = {
+    html: function () {
+      var ver = S.desktop ? S.desktop.info().version : '';
+      function card(n, title, items, ordered) {
+        var tag = ordered ? 'ol' : 'ul';
+        return '<div class="card help-card"><h3><span class="num-c">' + n + '</span>' + title + '</h3><' + tag + '>' + items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</' + tag + '></div>';
+      }
+      return '<div class="card"><div class="about"><img src="assets/icon.png" alt=""><div><h2>Quản lý Chấm công – Ngày phép</h2>' +
+        '<div class="muted">Phần mềm chấm công và quản lý ngày phép cho viên chức đơn vị sự nghiệp công lập' + (ver ? ' · Phiên bản ' + esc(ver) : '') + '</div></div>' +
+        '<div class="spacer"></div><button class="btn btn-primary" id="hpWizard">▶ Mở trình thiết lập</button></div></div>' +
+        '<div class="help-grid">' +
+        card(1, 'Thiết lập ban đầu (một lần)', [
+          'Khai báo <a data-go="settings">thông tin đơn vị</a> và người ký.',
+          'Nhập <a data-go="staff">danh sách viên chức</a> (dán từ Excel được).',
+          'Nhập <a data-go="leave">số ngày phép năm</a> cho từng người vào đầu mỗi năm.'], true) +
+        card(2, 'Chấm nghỉ hằng ngày', [
+          'Vào <a data-go="daily">Chấm nghỉ theo ngày</a> và chọn ngày.',
+          'Tích chọn người nghỉ, bấm <b>Sáng</b>, <b>Chiều</b> hoặc <b>Cả ngày</b>.',
+          'Chọn loại nghỉ: phép, ốm, công tác, học tập, nghỉ bù… rồi bấm <b>Lưu</b>.',
+          'Người không được tích tự động tính là đi làm đủ.'], true) +
+        card(3, 'Ngày phép năm', [
+          'Nghỉ <b>P – Nghỉ phép</b> tự trừ vào số phép: nửa ngày trừ 0,5, cả ngày trừ 1.',
+          'Phần mềm báo trước khi vượt số ngày phép.',
+          'Bấm vào tên trong <a data-go="leave">Ngày phép năm</a> để xem từng ngày đã nghỉ.',
+          'Đầu năm mới: bấm <b>Chuyển phép còn lại năm trước sang</b> nếu đơn vị cho phép.']) +
+        card(4, 'Ngày bù', [
+          'Trực, làm thêm vào thứ bảy, chủ nhật hoặc ngày lễ: vào <a data-go="bonus">Ngày bù</a> để cộng thêm.',
+          'Khi viên chức nghỉ bù, chấm ký hiệu <b>NB</b>. Phần mềm tự trừ vào số ngày bù còn tồn.']) +
+        card(5, 'Báo cáo cuối tháng', [
+          '<a data-go="timesheet">Bảng chấm công</a> theo mẫu C01-HD: bấm <b>In bảng</b> hoặc <b>Xuất Excel</b>.',
+          '<a data-go="summary">Thống kê tổng hợp</a> theo tháng hoặc theo năm.',
+          'Bảng theo dõi ngày phép năm in hoặc xuất Excel được.']) +
+        card(6, 'An toàn dữ liệu', [
+          S.desktop ? 'Dữ liệu tự lưu tại <b>' + esc(S.desktop.info().dataDir) + '</b> và tự sao lưu mỗi ngày.' : 'Dữ liệu lưu trong trình duyệt của máy này.',
+          'Nên bấm <b>Sao lưu ra file</b> (mục <a data-go="settings">Cài đặt</a>) mỗi tháng và chép ra USB.',
+          'Đổi máy: cài phần mềm trên máy mới, rồi bấm <b>Khôi phục từ file</b>.']) +
+        '</div>' +
+        '<div class="card small muted"><b>Phím tắt:</b> Ctrl+Enter để phân tích văn bản · Esc để đóng hộp thoại · F5 để tải lại (bản Windows).</div>';
+    },
+    bind: function () { $('#hpWizard').addEventListener('click', function () { openSetupWizard(1); }); }
+  };
+
   /* ================= Khởi động ================= */
   document.addEventListener('click', function (e) {
     var g = e.target.closest('[data-go]');
@@ -1527,5 +1680,7 @@
   initPeriod();
   var h = (location.hash || '').slice(1);
   if (Views[h]) state.view = h;
+  if (S.desktop) { try { $('#sideInfo').textContent = 'Phiên bản ' + S.desktop.info().version + ' · Dữ liệu tự sao lưu mỗi ngày.'; } catch (e) { /* bỏ qua */ } }
   render();
+  if (!S.data.staff.length && !S.data.settings.setupDone) setTimeout(function () { openSetupWizard(1); }, 300);
 })();

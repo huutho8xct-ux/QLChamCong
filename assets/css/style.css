@@ -347,3 +347,31 @@ select.dim { opacity: .55; }
 .leave-sum > div { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; text-align: center; }
 .leave-sum span { display: block; color: var(--muted); font-size: 12.5px; }
 .leave-sum b { font-size: 22px; }
+
+/* ---------- Bổ sung v1.2 ---------- */
+.nav-sec { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; font-weight: 700; padding: 14px 12px 4px; }
+.nav { overflow-y: auto; }
+.nav a { padding: 8px 12px; }
+.wizard-steps { display: flex; gap: 8px; margin-bottom: 18px; }
+.wizard-steps div { flex: 1; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--muted); padding-bottom: 8px; border-bottom: 3px solid var(--line); }
+.wizard-steps div.on { color: var(--primary); border-bottom-color: var(--primary-2); }
+.wizard-steps div.done { color: var(--ok); border-bottom-color: #22c55e; }
+.wizard-lead { margin: 0 0 14px; color: #334155; }
+.help-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.help-card h3 { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 15.5px; }
+.help-card h3 .num-c { width: 28px; height: 28px; border-radius: 50%; background: var(--primary-2); color: #fff; display: grid; place-items: center; font-size: 14px; flex-shrink: 0; }
+.help-card ol, .help-card ul { margin: 0; padding-left: 20px; line-height: 1.7; }
+.leave-low td { padding: 6px 10px; }
+.about { display: flex; gap: 18px; align-items: center; }
+.about img { width: 64px; height: 64px; }
+@media (max-width: 900px) { .help-grid { grid-template-columns: 1fr; } }
+.stats { grid-template-columns: repeat(5, 1fr); }
+.stat.c-sky { border-left-color: #0ea5e9; }
+.quick.q2 { grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 1200px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) { .stats, .quick.q2 { grid-template-columns: 1fr; } }
+.sidebar { width: 264px; }
+.brand { padding: 18px 16px; }
+.brand-title { font-size: 15px; white-space: nowrap; }
+.brand-sub { font-size: 11px; }
+@media (max-width: 900px) { .sidebar { left: -280px; } }

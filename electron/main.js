@@ -1,10 +1,10 @@
-/* Ứng dụng Windows (Electron) cho phần mềm Quản lý Chấm công Viên chức */
+/* Ứng dụng Windows (Electron) cho phần mềm Quản lý Chấm công – Ngày phép */
 'use strict';
 const { app, BrowserWindow, ipcMain, shell, Menu, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-const APP_NAME = 'Quản lý Chấm công';
+const APP_NAME = 'Quản lý Chấm công – Ngày phép';
 app.setAppUserModelId('vn.qlchamcong.app');
 
 // Thư mục dữ liệu dễ tìm: Documents\QLChamCong

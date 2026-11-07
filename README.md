@@ -1,4 +1,6 @@
-# Phần mềm Quản lý Chấm công Viên chức
+# Phần mềm Quản lý Chấm công – Ngày phép
+
+Phần mềm chấm công và quản lý ngày phép năm cho viên chức đơn vị sự nghiệp công lập.
 
 Phần mềm chấm công dành cho **đơn vị sự nghiệp công lập**. Chạy ngay trên trình duyệt, **không cần cài đặt, không cần Internet, không cần máy chủ**.
 
@@ -8,18 +10,22 @@ Phần mềm chấm công dành cho **đơn vị sự nghiệp công lập**. Ch
 
 1. Vào tab **Actions** của kho GitHub → chọn lần chạy **Build Windows** mới nhất → mục *Artifacts* tải **QLChamCong-Windows** (file .zip) và giải nén.
    (Nếu có mục **Releases** thì tải trực tiếp từ đó.)
-2. Chạy **`QLChamCong-CaiDat-x.y.z.exe`** → chọn thư mục cài → *Install*.
+2. Chạy **`CaiDat-ChamCong-NgayPhep-x.y.z.exe`** → chọn thư mục cài → *Install*.
    Nếu Windows hiện cảnh báo *"Windows protected your PC"*, bấm **More info → Run anyway** (do phần mềm chưa mua chữ ký số).
-3. Mở phần mềm bằng biểu tượng **Quản lý Chấm công** trên màn hình Desktop hoặc menu Start.
+3. Mở phần mềm bằng biểu tượng **Quản lý Chấm công – Ngày phép** trên màn hình Desktop hoặc menu Start.
 
 - Bộ cài dùng được cho Windows 7, 8, 10, 11, cả bản 32-bit và 64-bit.
-- **`QLChamCong-KhongCanCai-x.y.z.exe`**: bản chạy ngay, không cần cài đặt (chép vào USB dùng được).
+- **`ChamCong-NgayPhep-KhongCanCai-x.y.z.exe`**: bản chạy ngay, không cần cài đặt (chép vào USB dùng được).
 - Dữ liệu tự động ghi vào **`Documents\QLChamCong\du-lieu-cham-cong.json`**. Mỗi ngày phần mềm tự sao lưu 1 bản vào thư mục **`Documents\QLChamCong\SaoLuu`** (giữ 60 ngày gần nhất). Gỡ phần mềm hoặc cài bản mới **không làm mất dữ liệu**.
 - Muốn chuyển sang máy khác: chép thư mục `Documents\QLChamCong` sang máy mới, hoặc dùng *Sao lưu ra file* / *Khôi phục từ file* trong mục Cài đặt.
 
 **Cách 2 – Không cần cài:** mở file `index.html` bằng Chrome, Edge hoặc Cốc Cốc. Cách này dữ liệu chỉ lưu trong trình duyệt.
 
 ## Bắt đầu sử dụng
+
+Lần đầu mở phần mềm, **trình thiết lập 3 bước** tự hiện ra: (1) thông tin đơn vị, (2) danh sách viên chức (dán từ Excel được, tự bỏ cột STT), (3) số ngày phép năm. Sau đó có thể bắt đầu chấm công ngay. Mở lại trình thiết lập trong mục **Hướng dẫn sử dụng**.
+
+Các bước chi tiết:
 
 1. Vào **Cài đặt & Dữ liệu** để khai báo tên đơn vị, người ký, ngày lễ.
 2. Vào **Danh sách viên chức** để thêm từng người hoặc **Nhập nhiều** (dán từ Excel: Họ tên; Chức vụ; Phòng).

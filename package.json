@@ -1,7 +1,7 @@
 {
   "name": "qlchamcong",
-  "version": "1.1.0",
-  "description": "Phần mềm Quản lý Chấm công Viên chức đơn vị sự nghiệp công lập",
+  "version": "1.2.0",
+  "description": "Phần mềm Quản lý Chấm công – Ngày phép – dành cho viên chức đơn vị sự nghiệp công lập",
   "main": "electron/main.js",
   "author": "QLChamCong",
   "license": "MIT",
@@ -17,9 +17,12 @@
   },
   "build": {
     "appId": "vn.qlchamcong.app",
-    "productName": "QL Cham Cong",
+    "productName": "Quan ly Cham cong - Ngay phep",
     "copyright": "QLChamCong",
-    "directories": { "output": "dist", "buildResources": "build" },
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
     "files": [
       "index.html",
       "assets/**/*",
@@ -29,7 +32,7 @@
     ],
     "win": {
       "icon": "build/icon.ico",
-      "artifactName": "QLChamCong-${version}-${arch}-${target}.${ext}"
+      "artifactName": "ChamCong-NgayPhep-${version}-${arch}-${target}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -38,15 +41,23 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Quản lý Chấm công",
-      "uninstallDisplayName": "Quản lý Chấm công Viên chức",
+      "shortcutName": "Quản lý Chấm công – Ngày phép",
+      "uninstallDisplayName": "Quản lý Chấm công – Ngày phép",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "QLChamCong-CaiDat-${version}.${ext}"
+      "artifactName": "CaiDat-ChamCong-NgayPhep-${version}.${ext}",
+      "runAfterFinish": true,
+      "menuCategory": false,
+      "installerLanguages": [
+        "vi_VN"
+      ],
+      "language": "1066",
+      "license": "build/license.txt"
     },
     "portable": {
-      "artifactName": "QLChamCong-KhongCanCai-${version}.${ext}"
-    }
+      "artifactName": "ChamCong-NgayPhep-KhongCanCai-${version}.${ext}"
+    },
+    "compression": "maximum"
   }
 }

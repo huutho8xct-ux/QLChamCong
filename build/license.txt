@@ -1,0 +1,16 @@
+﻿PHẦN MỀM QUẢN LÝ CHẤM CÔNG – NGÀY PHÉP
+Dành cho viên chức đơn vị sự nghiệp công lập
+
+Chức năng chính:
+ • Chấm công hằng ngày theo buổi sáng / chiều / cả ngày (ký hiệu theo mẫu C01-HD)
+ • Tích chọn viên chức nghỉ theo ngày; nhập chấm công bằng văn bản
+ • Quản lý ngày phép năm: nhập từ đầu năm, tự trừ khi nghỉ phép, cảnh báo vượt phép
+ • Quản lý ngày bù, thống kê tổng hợp tháng / năm, in và xuất Excel
+
+Dữ liệu:
+ • Lưu trên máy tại thư mục Documents\QLChamCong
+ • Tự động sao lưu mỗi ngày vào Documents\QLChamCong\SaoLuu
+ • Gỡ cài đặt hoặc cài bản mới KHÔNG làm mất dữ liệu
+
+Phần mềm được cung cấp miễn phí, theo giấy phép MIT, không kèm bảo hành.
+Người dùng chịu trách nhiệm đối chiếu kết quả chấm công với quy định của đơn vị.
