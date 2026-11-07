@@ -312,3 +312,38 @@ table.ts { border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
   .print-area .sname { margin-top: 60px; font-weight: bold; }
   .print-area .small { font-size: 8.5pt; }
 }
+
+/* ---------- Chấm nghỉ theo ngày ---------- */
+.day-pick { display: flex; align-items: center; gap: 4px; background: var(--primary-soft); border: 1px solid #dbeafe; border-radius: 10px; padding: 3px 6px; }
+.day-pick input[type=date] { border: 0 !important; background: transparent !important; font-weight: 700; color: var(--primary); box-shadow: none !important; }
+.day-title { font-size: 15px; }
+.inline-field.nomargin { margin-left: 0; }
+.inline-field input[type=date] { padding: 6px 8px; }
+.w40 { width: 40px; }
+.big-check { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary-2); }
+.day-table td { padding: 8px 12px; }
+.day-table tr.on td { background: #f5f9ff; }
+.day-table tr.changed td:first-child { box-shadow: inset 4px 0 0 #f59e0b; }
+.seg-group { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+.seg-btn { border: 0; background: #fff; padding: 7px 14px; font: inherit; font-weight: 600; color: #475569; cursor: pointer; border-right: 1px solid #e2e8f0; }
+.seg-btn:last-child { border-right: 0; }
+.seg-btn:hover { background: #f1f5f9; }
+.seg-btn.on { background: var(--primary-2); color: #fff; }
+select.dim { opacity: .55; }
+.day-foot { position: sticky; bottom: 0; display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: #fff; border-top: 1px solid var(--line); box-shadow: 0 -4px 12px rgba(15,23,42,.05); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Phép năm ---------- */
+.leave-table td, .leave-table th { padding: 7px 8px; }
+.leave-table input.num { width: 72px; text-align: center; }
+.leave-table input.placeholder-val::placeholder { color: #94a3b8; }
+.leave-table .mcol { min-width: 34px; padding: 7px 3px; }
+.remain-cell { min-width: 120px; }
+.remain { display: flex; align-items: center; gap: 8px; }
+.remain b { min-width: 28px; text-align: right; font-size: 15px; }
+.remain .bar-track { flex: 1; }
+.bar-fill.ok { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.leave-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.leave-sum > div { background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; text-align: center; }
+.leave-sum span { display: block; color: var(--muted); font-size: 12.5px; }
+.leave-sum b { font-size: 22px; }

@@ -1,0 +1,52 @@
+{
+  "name": "qlchamcong",
+  "version": "1.1.0",
+  "description": "Phần mềm Quản lý Chấm công Viên chức đơn vị sự nghiệp công lập",
+  "main": "electron/main.js",
+  "author": "QLChamCong",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/parser.test.js",
+    "dist": "electron-builder --win nsis portable --x64 --ia32 --publish never"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "vn.qlchamcong.app",
+    "productName": "QL Cham Cong",
+    "copyright": "QLChamCong",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": [
+      "index.html",
+      "assets/**/*",
+      "electron/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "artifactName": "QLChamCong-${version}-${arch}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quản lý Chấm công",
+      "uninstallDisplayName": "Quản lý Chấm công Viên chức",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "QLChamCong-CaiDat-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "QLChamCong-KhongCanCai-${version}.${ext}"
+    }
+  }
+}

@@ -199,20 +199,38 @@
   }
   QLCC.bonusBalance = bonusBalance;
 
-  /** Phép năm đã dùng / còn lại trong năm y */
-  function annualLeave(data, staff, y) {
+  /** Số ngày phép năm được hưởng của viên chức trong năm y (nhập từ đầu năm) */
+  function leaveQuota(data, staff, y) {
+    var rec = staff.leave && staff.leave[y];
+    var hasRec = rec && rec.quota !== undefined && rec.quota !== null && rec.quota !== '';
+    var quota = hasRec ? Number(rec.quota)
+      : (staff.annualLeave !== undefined && staff.annualLeave !== null && staff.annualLeave !== '')
+        ? Number(staff.annualLeave) : Number(data.settings.annualLeave || 12);
+    var carry = rec && rec.carry ? Number(rec.carry) || 0 : 0;
+    return { quota: quota, carry: carry, total: quota + carry, entered: !!hasRec };
+  }
+  QLCC.leaveQuota = leaveQuota;
+
+  /** Số ngày nghỉ phép (P) đã dùng trong khoảng [from, to] - chỉ tính ngày làm việc */
+  function leaveUsed(data, staffId, from, to) {
     var used = 0;
-    var prefix = y + '-';
     Object.keys(data.records).forEach(function (s) {
-      if (s.indexOf(prefix) !== 0) return;
-      var r = data.records[s][staff.id];
-      if (!r) return;
+      if (s < from || s > to) return;
+      var r = data.records[s][staffId];
+      if (!r || !isWorkingDay(s, data.settings)) return;
       if (r.am === 'P') used += 0.5;
       if (r.pm === 'P') used += 0.5;
     });
-    var quota = (staff.annualLeave !== undefined && staff.annualLeave !== null && staff.annualLeave !== '')
-      ? Number(staff.annualLeave) : Number(data.settings.annualLeave || 12);
-    return { quota: quota, used: used, remain: quota - used };
+    return used;
+  }
+  QLCC.leaveUsed = leaveUsed;
+
+  /** Phép năm: được hưởng / đã nghỉ / còn lại trong năm y (tuỳ chọn tính đến ngày `upto`) */
+  function annualLeave(data, staff, y, upto) {
+    var q = leaveQuota(data, staff, y);
+    var to = upto && upto < ymd(y, 12, 31) ? upto : ymd(y, 12, 31);
+    var used = leaveUsed(data, staff.id, ymd(y, 1, 1), to);
+    return { quota: q.quota, carry: q.carry, total: q.total, entered: q.entered, used: used, remain: q.total - used };
   }
   QLCC.annualLeave = annualLeave;
 

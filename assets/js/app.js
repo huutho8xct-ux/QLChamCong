@@ -18,12 +18,18 @@
     summaryMode: 'month',
     staffFilter: '',
     showInactive: false,
-    bonusScope: 'year'
+    bonusScope: 'year',
+    dayDate: '',
+    dayTo: '',
+    dayCode: 'P',
+    dayFilter: '',
+    dayDraft: null
   };
 
   var TITLES = {
     dashboard: 'Tổng quan', input: 'Nhập chấm công từ văn bản', timesheet: 'Bảng chấm công',
-    summary: 'Thống kê tổng hợp', bonus: 'Quản lý ngày bù', staff: 'Danh sách viên chức', settings: 'Cài đặt & Dữ liệu'
+    summary: 'Thống kê tổng hợp', bonus: 'Quản lý ngày bù', staff: 'Danh sách viên chức', settings: 'Cài đặt & Dữ liệu',
+    daily: 'Chấm nghỉ theo ngày', leave: 'Quản lý phép năm'
   };
 
   /* ================= Tiện ích ================= */
@@ -803,7 +809,7 @@
       r.months.forEach(function (st) { html += '<td' + c + '>' + f(st.totalWithBonus) + '</td>'; });
       var yr = r.yr;
       html += '<td' + c + '><b>' + f0(yr.totalWithBonus) + '</b></td><td' + c + '>' + f(yr.counts.CT) + '</td><td' + c + '>' + f(yr.counts.H) + '</td>' +
-        '<td' + c + '>' + f0(r.leave.quota) + '</td><td' + c + '>' + f(r.leave.used) + '</td><td' + c + '><b class="' + (r.leave.remain < 0 ? 'neg' : '') + '">' + f0(r.leave.remain) + '</b></td>' +
+        '<td' + c + '>' + f0(r.leave.total) + '</td><td' + c + '>' + f(r.leave.used) + '</td><td' + c + '><b class="' + (r.leave.remain < 0 ? 'neg' : '') + '">' + f0(r.leave.remain) + '</b></td>' +
         '<td' + c + '>' + f(yr.bhxh) + '</td><td' + c + '>' + f(yr.unpaid) + '</td><td' + c + '>' + f(yr.bonusEarned) + '</td><td' + c + '>' + f(yr.bonusUsed) + '</td><td' + c + '><b class="' + (r.bal.balance < 0 ? 'neg' : '') + '">' + f0(r.bal.balance) + '</b></td></tr>';
     });
     html += '</tbody></table>';
@@ -916,6 +922,384 @@
     }
   };
 
+  /* ================= VIEW: Chấm nghỉ theo ngày (tích chọn) ================= */
+  function dayRowFromRecord(date, staffId) {
+    var rec = S.getRecord(date, staffId);
+    var am = rec && rec.am && rec.am !== '+' ? rec.am : '';
+    var pm = rec && rec.pm && rec.pm !== '+' ? rec.pm : '';
+    if (am && pm && am === pm) return { checked: true, session: 'full', code: am };
+    if (am && !pm) return { checked: true, session: 'am', code: am };
+    if (!am && pm) return { checked: true, session: 'pm', code: pm };
+    if (am && pm) return { checked: true, session: 'mixed', code: am, pmCode: pm };
+    return { checked: false, session: 'full', code: state.dayCode };
+  }
+  function buildDayDraft() {
+    var draft = {}, orig = {};
+    S.activeStaff().forEach(function (s) {
+      orig[s.id] = dayRowFromRecord(state.dayDate, s.id);
+      draft[s.id] = Object.assign({}, orig[s.id]);
+    });
+    state.dayDraft = { date: state.dayDate, rows: draft, orig: orig };
+  }
+  function rowLeaveDays(r) {
+    if (!r || !r.checked) return 0;
+    if (r.session === 'mixed') return (r.code === 'P' ? 0.5 : 0) + (r.pmCode === 'P' ? 0.5 : 0);
+    if (r.code !== 'P') return 0;
+    return r.session === 'full' ? 1 : 0.5;
+  }
+  function rowChanged(a, b) {
+    if (a.checked !== b.checked) return true;
+    if (!a.checked) return false;
+    return a.session !== b.session || a.code !== b.code || a.pmCode !== b.pmCode;
+  }
+  function dayRangeDates() {
+    var list = [state.dayDate];
+    if (state.dayTo && state.dayTo > state.dayDate) {
+      for (var d = Q.addDays(state.dayDate, 1), g = 0; d <= state.dayTo && g < 120; d = Q.addDays(d, 1), g++) {
+        if (Q.isWorkingDay(d, S.data.settings)) list.push(d);
+      }
+    }
+    return list;
+  }
+
+  Views.daily = {
+    html: function () {
+      if (!state.dayDate) {
+        var t = Q.todayYmd();
+        state.dayDate = t.slice(0, 7) === Q.ymd(state.year, state.month, 1).slice(0, 7) ? t : Q.ymd(state.year, state.month, 1);
+      }
+      if (!state.dayDraft || state.dayDraft.date !== state.dayDate) buildDayDraft();
+      var d = state.dayDate, y = +d.slice(0, 4);
+      var working = Q.isWorkingDay(d, S.data.settings);
+      var hol = Q.holidayName(d, S.data.settings);
+      var staff = S.activeStaff();
+      var f = Q.nameKey(state.dayFilter || '');
+      var rows = state.dayDraft.rows, orig = state.dayDraft.orig;
+      var dates = dayRangeDates();
+      var nDays = dates.length;
+
+      var html = '<div class="card day-toolbar"><div class="row gap wrap">' +
+        '<div class="day-pick"><button class="btn-icon" id="dayPrev" title="Ngày làm việc trước">‹</button>' +
+        '<input type="date" id="dayDate" value="' + d + '"><button class="btn-icon" id="dayNext" title="Ngày làm việc sau">›</button>' +
+        '<button class="btn btn-ghost btn-sm" id="dayToday">Hôm nay</button></div>' +
+        '<div class="day-title"><b>' + Q.WD_LONG[Q.weekday(d)] + ', ' + Q.fmtDate(d) + '</b>' +
+        (hol ? ' <span class="tag hol">' + esc(hol) + '</span>' : (!working ? ' <span class="tag off">Ngày nghỉ</span>' : '')) + '</div>' +
+        '<div class="spacer"></div>' +
+        '<label class="inline-field">Nghỉ nhiều ngày, đến hết ngày <input type="date" id="dayTo" value="' + esc(state.dayTo || '') + '" min="' + d + '"></label>' +
+        '</div><div class="row gap wrap mt">' +
+        '<label class="inline-field nomargin">Loại nghỉ khi tích chọn <select id="dayCode">' + codeOptions(state.dayCode).replace(/<option value="\+"[^>]*>[^<]*<\/option>/, '') + '</select></label>' +
+        '<input type="search" id="dayFilter" placeholder="🔍 Tìm viên chức..." value="' + esc(state.dayFilter || '') + '">' +
+        '<div class="spacer"></div>' +
+        '<button class="btn btn-sm" id="dayAllFull">☑ Chọn tất cả (cả ngày)</button>' +
+        '<button class="btn btn-sm btn-ghost" id="dayNone">☐ Bỏ chọn tất cả</button></div>' +
+        (nDays > 1 ? '<div class="paint-hint">Các viên chức được tích sẽ được ghi nghỉ <b>' + nDays + ' ngày làm việc</b> từ ' + Q.fmtDate(d) + ' đến ' + Q.fmtDate(state.dayTo) + ' (tự bỏ qua thứ bảy, chủ nhật, ngày lễ).</div>' : '') +
+        '</div>';
+
+      if (!staff.length) return html + '<div class="card"><div class="empty">Chưa có viên chức. <a data-go="staff">Thêm viên chức</a></div></div>';
+      if (!working) {
+        return html + '<div class="card"><div class="empty">Ngày ' + Q.fmtDate(d) + ' là ' + (hol ? 'ngày lễ (' + esc(hol) + ')' : 'ngày nghỉ cuối tuần') +
+          ', không cần chấm nghỉ.<br>Chọn ngày khác, hoặc vào <a data-go="bonus">Ngày bù</a> nếu có người trực / làm thêm.</div></div>';
+      }
+
+      var nChecked = 0, nChanged = 0;
+      html += '<div class="card p0"><div class="table-wrap"><table class="table day-table"><thead><tr>' +
+        '<th class="w40"></th><th>STT</th><th>Họ và tên</th><th>Nghỉ buổi nào?</th><th>Loại nghỉ</th><th>Trước đó</th><th class="num">Phép năm ' + y + ' còn lại</th></tr></thead><tbody>';
+      staff.forEach(function (s, i) {
+        var r = rows[s.id], o = orig[s.id];
+        if (r.checked) nChecked++;
+        var changed = rowChanged(r, o);
+        if (changed) nChanged++;
+        if (f && Q.nameKey(s.name + ' ' + (s.position || '')).indexOf(f) < 0) return;
+        var al = Q.annualLeave(S.data, s, y);
+        var delta = (rowLeaveDays(r) - rowLeaveDays(o)) * (r.checked && r.code === 'P' && r.session !== 'mixed' ? nDays : 1);
+        if (nDays > 1 && r.checked && r.code === 'P' && r.session !== 'mixed') {
+          delta = rowLeaveDays(r) * nDays - rowLeaveDays(o);
+          // các ngày sau trong khoảng đã là phép thì không trừ lại
+          dates.slice(1).forEach(function (dd) {
+            var ro = dayRowFromRecord(dd, s.id);
+            delta -= rowLeaveDays(ro);
+          });
+        }
+        var after = al.remain - delta;
+        var seg = function (val, label) {
+          return '<button class="seg-btn' + (r.checked && r.session === val ? ' on' : '') + '" data-sess="' + val + '" data-sid="' + s.id + '">' + label + '</button>';
+        };
+        var prev = o.checked ? (o.session === 'mixed' ? badge(o.code) + ' sáng, ' + badge(o.pmCode) + ' chiều'
+          : badge(o.code) + ' ' + sessionLabel(o.session).toLowerCase()) : '<span class="muted">Đi làm</span>';
+        html += '<tr class="' + (r.checked ? 'on' : '') + (changed ? ' changed' : '') + '" data-sid="' + s.id + '">' +
+          '<td><input type="checkbox" class="big-check" data-chk="' + s.id + '"' + (r.checked ? ' checked' : '') + '></td>' +
+          '<td class="muted">' + (i + 1) + '</td>' +
+          '<td><b>' + esc(s.name) + '</b><div class="muted small">' + esc(s.position || '') + '</div></td>' +
+          '<td>' + (r.checked && r.session === 'mixed'
+            ? '<span class="small">Sáng ' + badge(r.code) + ' · Chiều ' + badge(r.pmCode) + '</span> <button class="btn btn-xs" data-sess="full" data-sid="' + s.id + '">Đổi</button>'
+            : '<div class="seg-group">' + seg('am', 'Sáng') + seg('pm', 'Chiều') + seg('full', 'Cả ngày') + '</div>') + '</td>' +
+          '<td>' + (r.session === 'mixed' && r.checked ? '' : '<select data-code="' + s.id + '"' + (r.checked ? '' : ' class="dim"') + '>' +
+            codeOptions(r.code).replace(/<option value="\+"[^>]*>[^<]*<\/option>/, '') + '</select>') + '</td>' +
+          '<td class="small">' + prev + '</td>' +
+          '<td class="num nowrap"><span class="' + (al.remain < 0 ? 'neg' : '') + '">' + Q.fmtNum0(al.remain) + '</span>' +
+          (delta ? ' → <b class="' + (after < 0 ? 'neg' : 'pos') + '">' + Q.fmtNum0(after) + '</b>' : '') +
+          '<div class="muted small">/ ' + Q.fmtNum0(al.total) + ' ngày</div></td></tr>';
+      });
+      html += '</tbody></table></div>' +
+        '<div class="day-foot"><div><b>' + nChecked + '</b> viên chức nghỉ trong ngày' + (nChanged ? ' · <span class="warn-text">' + nChanged + ' thay đổi chưa lưu</span>' : '') + '</div><div class="spacer"></div>' +
+        (nChanged ? '<button class="btn btn-ghost" id="dayReset">Huỷ thay đổi</button>' : '') +
+        '<button class="btn btn-primary btn-lg" id="daySave"' + (nChanged || nDays > 1 ? '' : ' disabled') + '>✔ Lưu chấm nghỉ' + (nDays > 1 ? ' (' + nDays + ' ngày)' : ' ngày ' + Q.fmtDate(d).slice(0, 5)) + '</button></div></div>';
+      html += '<div class="card small muted">Mẹo: tích ô vuông hoặc bấm <b>Sáng / Chiều / Cả ngày</b> để chọn người nghỉ. Bỏ tích = người đó đi làm bình thường. ' +
+        'Nghỉ loại <b>P – Nghỉ phép</b> sẽ tự trừ vào số ngày phép năm (nhập ở mục <a data-go="leave">Phép năm</a>).</div>';
+      return html;
+    },
+    bind: function () {
+      function setDate(v) {
+        if (!v) return;
+        if (state.dayDraft && Object.keys(state.dayDraft.rows).some(function (k) { return rowChanged(state.dayDraft.rows[k], state.dayDraft.orig[k]); }) &&
+          !confirmBox('Có thay đổi chưa lưu. Bỏ qua thay đổi và chuyển ngày?')) { render(); return; }
+        state.dayDate = v; state.dayDraft = null;
+        if (state.dayTo && state.dayTo <= v) state.dayTo = '';
+        state.year = +v.slice(0, 4); state.month = +v.slice(5, 7);
+        render();
+      }
+      function stepWorking(dir) {
+        var d = state.dayDate;
+        for (var i = 0; i < 14; i++) { d = Q.addDays(d, dir); if (Q.isWorkingDay(d, S.data.settings)) break; }
+        setDate(d);
+      }
+      $('#dayDate').addEventListener('change', function () { setDate(this.value); });
+      $('#dayPrev').addEventListener('click', function () { stepWorking(-1); });
+      $('#dayNext').addEventListener('click', function () { stepWorking(1); });
+      $('#dayToday').addEventListener('click', function () { setDate(Q.todayYmd()); });
+      $('#dayTo').addEventListener('change', function () { state.dayTo = this.value; render(); });
+      $('#dayCode').addEventListener('change', function () {
+        state.dayCode = this.value;
+        // áp dụng cho các dòng đang tích mà chưa có dữ liệu trước đó
+        var rows = state.dayDraft.rows;
+        Object.keys(rows).forEach(function (k) { if (!rows[k].checked) rows[k].code = state.dayCode; });
+        render();
+      });
+      var f = $('#dayFilter');
+      if (f) f.addEventListener('input', function () { state.dayFilter = f.value; var p = f.selectionStart; render(); var n = $('#dayFilter'); n.focus(); n.setSelectionRange(p, p); });
+      if (!state.dayDraft || !$('.day-table')) return;
+      var rows = state.dayDraft.rows;
+      $all('[data-chk]').forEach(function (c) {
+        c.addEventListener('change', function () {
+          var r = rows[c.getAttribute('data-chk')];
+          r.checked = c.checked;
+          if (r.checked && r.session === 'mixed') { /* giữ nguyên */ }
+          render();
+        });
+      });
+      $all('[data-sess]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var r = rows[b.getAttribute('data-sid')];
+          var v = b.getAttribute('data-sess');
+          if (r.checked && r.session === v) r.checked = false;   // bấm lại để bỏ chọn
+          else { r.checked = true; r.session = v; delete r.pmCode; if (!r.code || r.code === '+') r.code = state.dayCode; }
+          render();
+        });
+      });
+      $all('[data-code]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          var r = rows[sel.getAttribute('data-code')];
+          r.code = sel.value; r.checked = true; if (r.session === 'mixed') r.session = 'full';
+          render();
+        });
+      });
+      $('#dayAllFull').addEventListener('click', function () {
+        Object.keys(rows).forEach(function (k) { var r = rows[k]; if (!r.checked) { r.checked = true; r.session = 'full'; r.code = state.dayCode; } });
+        render();
+      });
+      $('#dayNone').addEventListener('click', function () {
+        Object.keys(rows).forEach(function (k) { rows[k].checked = false; });
+        render();
+      });
+      var rs = $('#dayReset');
+      if (rs) rs.addEventListener('click', function () { buildDayDraft(); render(); });
+      $('#daySave').addEventListener('click', function () {
+        var dd = state.dayDraft, dates = dayRangeDates();
+        var entries = [], negatives = [];
+        var y = +state.dayDate.slice(0, 4);
+        S.activeStaff().forEach(function (s) {
+          var r = dd.rows[s.id], o = dd.orig[s.id];
+          var changed = rowChanged(r, o);
+          function push(date, session, code) { entries.push({ kind: 'att', staffId: s.id, staffName: s.name, date: date, session: session, code: code }); }
+          function writeDay(date) {
+            if (r.session === 'mixed') return;
+            if (r.session === 'full') push(date, 'full', r.code);
+            else if (r.session === 'am') { push(date, 'am', r.code); push(date, 'pm', '+'); }
+            else { push(date, 'am', '+'); push(date, 'pm', r.code); }
+          }
+          if (changed) {
+            if (r.checked) writeDay(dates[0]);
+            else push(dates[0], 'full', '+');
+          }
+          if (r.checked && dates.length > 1) dates.slice(1).forEach(writeDay);
+        });
+        if (!entries.length) { toast('Không có thay đổi nào để lưu.', 'err'); return; }
+        // Kiểm tra vượt phép năm
+        var tmp = JSON.parse(JSON.stringify(S.data));
+        var touched = {};
+        entries.forEach(function (e) {
+          touched[e.staffId] = 1;
+          if (!tmp.records[e.date]) tmp.records[e.date] = {};
+          var cur = tmp.records[e.date][e.staffId] || { am: '', pm: '' };
+          var code = e.code === '+' ? '' : e.code;
+          if (e.session !== 'pm') cur.am = code;
+          if (e.session !== 'am') cur.pm = code;
+          tmp.records[e.date][e.staffId] = cur;
+        });
+        Object.keys(touched).forEach(function (id) {
+          var s = S.getStaff(id);
+          var al = Q.annualLeave(tmp, s, y);
+          var before = Q.annualLeave(S.data, s, y);
+          if (al.remain < 0 && al.remain < before.remain) negatives.push(s.name + ' (còn ' + Q.fmtNum0(al.remain) + ' ngày)');
+        });
+        if (negatives.length && !confirmBox('Các viên chức sau sẽ VƯỢT số ngày phép năm ' + y + ':\n- ' + negatives.join('\n- ') + '\n\nVẫn lưu?')) return;
+        var label = 'Chấm nghỉ theo ngày ' + Q.fmtDate(dates[0]) + (dates.length > 1 ? ' đến ' + Q.fmtDate(dates[dates.length - 1]) : '');
+        S.applyEntries(entries, label);
+        toast('Đã lưu chấm nghỉ ' + (dates.length > 1 ? dates.length + ' ngày.' : 'ngày ' + Q.fmtDate(dates[0]) + '.'));
+        state.dayDraft = null; state.dayTo = '';
+        render();
+      });
+    }
+  };
+
+  /* ================= VIEW: Phép năm ================= */
+  function leaveRows(y) {
+    return S.activeStaff().map(function (s) {
+      var al = Q.annualLeave(S.data, s, y);
+      var months = [];
+      for (var m = 1; m <= 12; m++) months.push(Q.leaveUsed(S.data, s.id, Q.ymd(y, m, 1), Q.ymd(y, m, Q.daysInMonth(y, m))));
+      return { s: s, al: al, months: months };
+    });
+  }
+  function leaveTableExport(xls) {
+    var y = state.year;
+    var bd = xls ? ' border="1"' : '';
+    var th = xls ? ' style="background:#dbeafe;font-weight:bold;text-align:center"' : '';
+    var c = xls ? ' style="text-align:center"' : ' class="num"';
+    var html = '<table class="table sum pt"' + bd + '><thead><tr><th rowspan="2"' + th + '>STT</th><th rowspan="2"' + th + '>Họ và tên</th><th rowspan="2"' + th + '>Chức vụ</th>' +
+      '<th rowspan="2"' + th + '>Phép được hưởng</th><th rowspan="2"' + th + '>Năm trước chuyển sang</th><th rowspan="2"' + th + '>Tổng</th><th colspan="12"' + th + '>Số ngày đã nghỉ phép theo tháng</th>' +
+      '<th rowspan="2"' + th + '>Đã nghỉ</th><th rowspan="2"' + th + '>Còn lại</th></tr><tr>';
+    for (var m = 1; m <= 12; m++) html += '<th' + th + '>T' + m + '</th>';
+    html += '</tr></thead><tbody>';
+    leaveRows(y).forEach(function (r, i) {
+      html += '<tr><td' + c + '>' + (i + 1) + '</td><td>' + esc(r.s.name) + '</td><td>' + esc(r.s.position || '') + '</td><td' + c + '>' + r.al.quota + '</td><td' + c + '>' + (r.al.carry || '') + '</td><td' + c + '>' + r.al.total + '</td>';
+      r.months.forEach(function (v) { html += '<td' + c + '>' + (v || '') + '</td>'; });
+      html += '<td' + c + '>' + r.al.used + '</td><td' + c + '><b>' + r.al.remain + '</b></td></tr>';
+    });
+    return html + '</tbody></table>';
+  }
+  function openLeaveDetail(staffId, y) {
+    var s = S.getStaff(staffId);
+    var list = [];
+    Object.keys(S.data.records).sort().forEach(function (d) {
+      if (d.slice(0, 4) !== String(y)) return;
+      var r = S.data.records[d][staffId];
+      if (!r || !Q.isWorkingDay(d, S.data.settings)) return;
+      var a = r.am === 'P', p = r.pm === 'P';
+      if (a || p) list.push({ d: d, s: a && p ? 'Cả ngày' : a ? 'Sáng' : 'Chiều', v: (a ? 0.5 : 0) + (p ? 0.5 : 0), note: r.note });
+    });
+    var al = Q.annualLeave(S.data, s, y);
+    var body = '<div class="leave-sum"><div><span>Được hưởng</span><b>' + Q.fmtNum0(al.total) + '</b></div><div><span>Đã nghỉ</span><b>' + Q.fmtNum0(al.used) + '</b></div><div><span>Còn lại</span><b class="' + (al.remain < 0 ? 'neg' : 'pos') + '">' + Q.fmtNum0(al.remain) + '</b></div></div>' +
+      (list.length ? '<table class="table compact mt"><thead><tr><th>Ngày</th><th>Buổi</th><th class="num">Số ngày</th><th>Ghi chú</th></tr></thead><tbody>' + list.map(function (x) {
+        return '<tr><td>' + Q.WD_SHORT[Q.weekday(x.d)] + ', ' + Q.fmtDate(x.d) + '</td><td>' + x.s + '</td><td class="num">' + Q.fmtNum0(x.v) + '</td><td class="muted">' + esc(x.note || '') + '</td></tr>';
+      }).join('') + '</tbody></table>' : '<div class="empty">Chưa nghỉ phép ngày nào trong năm ' + y + '.</div>');
+    Modal.open('Chi tiết nghỉ phép năm ' + y + ' – ' + s.name, body, '<div class="spacer"></div><button class="btn" data-close>Đóng</button>');
+  }
+  Views.leave = {
+    html: function () {
+      var y = state.year;
+      var rows = leaveRows(y);
+      var notEntered = rows.filter(function (r) { return !r.al.entered; }).length;
+      var html = '<div class="card"><div class="row gap wrap"><div><h3>Phép năm ' + y + '</h3><div class="muted small">Nhập số ngày phép được hưởng của từng viên chức từ đầu năm. Mỗi lần chấm <b>P – Nghỉ phép</b> sẽ tự trừ vào số còn lại.</div></div>' +
+        '<div class="spacer"></div><button class="btn" id="lvPrint">🖨 In</button><button class="btn btn-success" id="lvExcel">⬇ Xuất Excel</button></div>' +
+        '<div class="row gap wrap mt">' +
+        '<label class="inline-field nomargin">Số ngày phép cho tất cả: <input type="number" class="num" id="lvAll" min="0" step="1" value="' + S.data.settings.annualLeave + '"></label>' +
+        '<button class="btn btn-sm" id="lvApplyEmpty">Áp dụng cho người chưa nhập' + (notEntered ? ' (' + notEntered + ')' : '') + '</button>' +
+        '<button class="btn btn-sm" id="lvApplyAll">Áp dụng cho tất cả</button>' +
+        '<button class="btn btn-sm" id="lvCopyPrev">Lấy số ngày được hưởng của năm ' + (y - 1) + '</button>' +
+        '<button class="btn btn-sm" id="lvCarry">Chuyển phép còn lại năm ' + (y - 1) + ' sang</button>' +
+        '</div></div>';
+      if (!rows.length) return html + '<div class="card"><div class="empty">Chưa có viên chức.</div></div>';
+      html += '<div class="card p0"><div class="table-wrap"><table class="table leave-table"><thead><tr><th>STT</th><th>Họ và tên</th>' +
+        '<th class="num">Phép được hưởng</th><th class="num">Năm trước chuyển sang</th><th class="num">Tổng</th>';
+      for (var m = 1; m <= 12; m++) html += '<th class="num mcol">T' + m + '</th>';
+      html += '<th class="num">Đã nghỉ</th><th>Còn lại</th></tr></thead><tbody>';
+      rows.forEach(function (r, i) {
+        var pct = r.al.total > 0 ? Math.max(0, Math.min(100, r.al.remain / r.al.total * 100)) : 0;
+        html += '<tr><td class="muted">' + (i + 1) + '</td><td><a data-lvdetail="' + r.s.id + '"><b>' + esc(r.s.name) + '</b></a><div class="muted small">' + esc(r.s.position || '') + '</div></td>' +
+          '<td class="num"><input type="number" class="num' + (r.al.entered ? '' : ' placeholder-val') + '" min="0" step="0.5" data-lvq="' + r.s.id + '" value="' + (r.al.entered ? r.al.quota : '') + '" placeholder="' + r.al.quota + '"></td>' +
+          '<td class="num"><input type="number" class="num" min="0" step="0.5" data-lvc="' + r.s.id + '" value="' + (r.al.carry || '') + '" placeholder="0"></td>' +
+          '<td class="num"><b>' + Q.fmtNum0(r.al.total) + '</b></td>';
+        r.months.forEach(function (v) { html += '<td class="num mcol">' + (v ? '<span class="code-badge g-paid">' + Q.fmtNum0(v) + '</span>' : '<span class="muted">·</span>') + '</td>'; });
+        html += '<td class="num"><b>' + Q.fmtNum0(r.al.used) + '</b></td><td class="remain-cell"><div class="remain"><b class="' + (r.al.remain < 0 ? 'neg' : '') + '">' + Q.fmtNum0(r.al.remain) + '</b>' +
+          '<div class="bar-track"><div class="bar-fill ok" style="width:' + pct + '%"></div></div></div></td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+      html += '<div class="card small muted">Ô "Phép được hưởng" để trống sẽ lấy số mặc định (của viên chức hoặc trong Cài đặt) – hiển thị mờ. ' +
+        'Bấm vào tên để xem chi tiết các ngày đã nghỉ phép. Số ngày phép theo Bộ luật Lao động: 12 ngày/năm, cộng thêm 1 ngày cho mỗi 5 năm làm việc (tuỳ quy định của đơn vị).</div>';
+      return html;
+    },
+    bind: function () {
+      var y = state.year;
+      function rec(s) { s.leave = s.leave || {}; s.leave[y] = s.leave[y] || {}; return s.leave[y]; }
+      $('#lvPrint').addEventListener('click', function () {
+        doPrint(headerBlock('BẢNG THEO DÕI NGÀY NGHỈ PHÉP NĂM', 'Năm ' + y) + leaveTableExport(false) + signBlock());
+      });
+      $('#lvExcel').addEventListener('click', function () {
+        var html = xlsHeader('BẢNG THEO DÕI NGÀY NGHỈ PHÉP NĂM', 'Năm ' + y, 20) + leaveTableExport(true) + xlsSign(20);
+        download('PhepNam_' + y + '.xls', xlsWrap('Phep nam ' + y, html), 'application/vnd.ms-excel;charset=utf-8');
+        toast('Đã xuất file Excel.');
+      });
+      $all('[data-lvq]').forEach(function (inp) {
+        inp.addEventListener('change', function () {
+          var s = S.getStaff(inp.getAttribute('data-lvq'));
+          rec(s).quota = inp.value === '' ? '' : +inp.value;
+          S.save(); toast('Đã lưu phép năm của ' + s.name + '.'); render();
+        });
+      });
+      $all('[data-lvc]').forEach(function (inp) {
+        inp.addEventListener('change', function () {
+          var s = S.getStaff(inp.getAttribute('data-lvc'));
+          rec(s).carry = +inp.value || 0;
+          S.save(); toast('Đã lưu.'); render();
+        });
+      });
+      $all('[data-lvdetail]').forEach(function (a) { a.addEventListener('click', function () { openLeaveDetail(a.getAttribute('data-lvdetail'), y); }); });
+      function applyAll(onlyEmpty) {
+        var v = +$('#lvAll').value;
+        if (!(v >= 0)) return;
+        var n = 0;
+        S.activeStaff().forEach(function (s) {
+          if (onlyEmpty && Q.leaveQuota(S.data, s, y).entered) return;
+          rec(s).quota = v; n++;
+        });
+        S.save(); toast('Đã đặt ' + v + ' ngày phép năm ' + y + ' cho ' + n + ' viên chức.'); render();
+      }
+      $('#lvApplyEmpty').addEventListener('click', function () { applyAll(true); });
+      $('#lvApplyAll').addEventListener('click', function () {
+        if (confirmBox('Đặt lại số ngày phép năm ' + y + ' cho TẤT CẢ viên chức?')) applyAll(false);
+      });
+      $('#lvCopyPrev').addEventListener('click', function () {
+        var n = 0;
+        S.activeStaff().forEach(function (s) {
+          var p = s.leave && s.leave[y - 1];
+          if (p && p.quota !== undefined && p.quota !== '') { rec(s).quota = p.quota; n++; }
+        });
+        S.save(); toast(n ? 'Đã sao chép cho ' + n + ' viên chức.' : 'Năm ' + (y - 1) + ' chưa nhập phép năm.', n ? 'ok' : 'err'); render();
+      });
+      $('#lvCarry').addEventListener('click', function () {
+        if (!confirmBox('Chuyển số ngày phép còn lại (nếu > 0) của năm ' + (y - 1) + ' sang năm ' + y + '?')) return;
+        var n = 0;
+        S.activeStaff().forEach(function (s) {
+          var r = Q.annualLeave(S.data, s, y - 1);
+          rec(s).carry = r.remain > 0 ? r.remain : 0;
+          if (r.remain > 0) n++;
+        });
+        S.save(); toast('Đã chuyển phép cho ' + n + ' viên chức.'); render();
+      });
+    }
+  };
+
   /* ================= VIEW: Danh sách viên chức ================= */
   function openStaffModal(id, preset, after) {
     var s = id ? S.getStaff(id) : Object.assign({ name: '', code: '', position: '', department: '', alias: '', annualLeave: '', active: true }, preset || {});
@@ -924,7 +1308,7 @@
       '<label>Mã viên chức<input id="sfCode" value="' + esc(s.code || '') + '"></label>' +
       '<label>Chức vụ / chức danh<input id="sfPos" value="' + esc(s.position || '') + '" list="dlPos"></label>' +
       '<label>Phòng / Khoa / Tổ<input id="sfDept" value="' + esc(s.department || '') + '" list="dlDept"></label>' +
-      '<label>Số ngày phép năm<input type="number" id="sfLeave" min="0" step="1" value="' + esc(s.annualLeave === undefined ? '' : s.annualLeave) + '" placeholder="Mặc định: ' + S.data.settings.annualLeave + '"></label>' +
+      '<label>Số ngày phép năm (mặc định)<input type="number" id="sfLeave" min="0" step="1" value="' + esc(s.annualLeave === undefined ? '' : s.annualLeave) + '" placeholder="Mặc định: ' + S.data.settings.annualLeave + '"></label>' +
       '<label class="span2">Tên gọi khác (để nhận diện trong văn bản, cách nhau dấu phẩy)<input id="sfAlias" value="' + esc(s.alias || '') + '" placeholder="VD: Hùng KT, Thầy Hùng"></label>' +
       '<label class="check span2"><input type="checkbox" id="sfActive"' + (s.active !== false ? ' checked' : '') + '> Đang làm việc (bỏ chọn nếu đã nghỉ việc, chuyển công tác)</label>' +
       '</div>' + datalists();
@@ -1071,9 +1455,11 @@
 
       var size = (JSON.stringify(S.data).length / 1024).toFixed(1);
       html += '<div class="card"><div class="card-head"><h3>Sao lưu & khôi phục dữ liệu</h3></div>' +
-        '<p class="muted small">Dữ liệu được lưu trong trình duyệt của máy này (' + size + ' KB). Hãy <b>sao lưu thường xuyên</b> ra file để phòng mất dữ liệu hoặc chuyển sang máy khác.</p>' +
+        '<p class="muted small">Dữ liệu được lưu trên máy này (' + size + ' KB). Hãy <b>sao lưu thường xuyên</b> ra file để phòng mất dữ liệu hoặc chuyển sang máy khác.</p>' +
         '<div class="row gap wrap"><button class="btn btn-primary" id="bkExport">⬇ Sao lưu ra file</button>' +
         '<label class="btn">⬆ Khôi phục từ file<input type="file" id="bkImport" accept=".json,application/json" hidden></label></div>' +
+        (S.desktop ? '<div class="alert info small mt">Bản cài đặt Windows: dữ liệu được tự động ghi vào <b>' + esc(S.desktop.info().dataDir) + '</b> và tự sao lưu mỗi ngày trong thư mục <b>SaoLuu</b> (giữ 60 ngày gần nhất).' +
+          '<div class="mt"><button class="btn btn-sm" id="bkOpenDir">📂 Mở thư mục dữ liệu</button></div></div>' : '') +
         '<hr><div class="row gap wrap"><button class="btn" id="bkSample">Nạp viên chức mẫu</button>' +
         '<button class="btn btn-danger" id="bkReset">Xoá toàn bộ dữ liệu</button></div></div></div>';
       return html;
@@ -1122,6 +1508,8 @@
         };
         r.readAsText(file);
       });
+      var od = $('#bkOpenDir');
+      if (od) od.addEventListener('click', function () { S.desktop.openDataDir(); });
       $('#bkSample').addEventListener('click', function () { loadSampleStaff(); toast('Đã nạp viên chức mẫu.'); render(); });
       $('#bkReset').addEventListener('click', function () {
         if (!confirmBox('XOÁ TOÀN BỘ dữ liệu (viên chức, chấm công, ngày bù, cài đặt)? Thao tác không thể hoàn tác.\nNên sao lưu trước khi xoá.')) return;

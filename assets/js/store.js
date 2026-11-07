@@ -35,9 +35,16 @@
 
   var Store = {
     data: null,
+    /** Bản cài đặt Windows: có thêm file dữ liệu trong Documents\\QLChamCong */
+    desktop: (typeof window !== 'undefined' && window.QLCCDesktop) ? window.QLCCDesktop : null,
     load: function () {
-      var d = null;
+      var d = null, f = null;
       try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { d = null; }
+      if (this.desktop) {
+        try { f = JSON.parse(this.desktop.read() || 'null'); } catch (e) { f = null; }
+        // Lấy bản mới hơn giữa bộ nhớ trình duyệt và file trên máy
+        if (f && f.staff && (!d || (f.savedAt || '') > (d.savedAt || ''))) d = f;
+      }
       this.data = this.migrate(d || defaultData());
       return this.data;
     },
@@ -53,7 +60,10 @@
     },
     save: function () {
       try {
-        localStorage.setItem(KEY, JSON.stringify(this.data));
+        this.data.savedAt = new Date().toISOString();
+        var text = JSON.stringify(this.data);
+        localStorage.setItem(KEY, text);
+        if (this.desktop && !this.desktop.write(text)) alert('Không ghi được file dữ liệu vào thư mục Documents\\QLChamCong.');
         return true;
       } catch (e) {
         alert('Không lưu được dữ liệu: ' + e.message);
